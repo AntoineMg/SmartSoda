@@ -1,8 +1,8 @@
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 
-#define PIN_POMPE1 6
-#define PIN_POMPE2 7
+#define PIN_POMPE1 8
+#define PIN_POMPE2 9
 #define PIN_POTENTIOMETRE 1//A1
 #define PIN_BP1 0x10
 #define PIN_POIDS 2
@@ -50,11 +50,33 @@ void eteintLeds(){
     }
 }
 
+void allumePompe1(){
+  digitalWrite(PIN_POMPE1, HIGH);
+  Serial.println("Pompe 1 allumée");
+}
+
+void allumePompe2(){
+  digitalWrite(PIN_POMPE2, HIGH);
+  Serial.println("Pompe 2 allumée");
+}
+
+void eteintPompe1(){
+  digitalWrite(PIN_POMPE1, LOW);
+  Serial.println("Pompe 1 éteinte");
+}
+
+void eteintPompe2(){
+  digitalWrite(PIN_POMPE2, LOW);
+  Serial.println("Pompe 2 éteinte");
+}
+
 void setup() {
   Serial.begin(9600);
   DDRB = 0x00;
   DDRC = 0x00;
   DDRD = 0x00;
+  pinMode(PIN_POMPE1, OUTPUT);
+  pinMode(PIN_POMPE2, OUTPUT);
   strip.begin();
   
 }
@@ -67,7 +89,7 @@ void loop() {
   //LECTURE ENTREES
 
   //Etat du bouton cablé sur PORT Dx = PDx
-  g_bool_BP = ((PIND & PIN_BP1) == PIN_BP1);
+  g_bool_BP = !((PIND & PIN_BP1) == PIN_BP1);
 
   //debug poids
   g_int_poids = analogRead(PIN_POTENTIOMETRE);
@@ -120,22 +142,35 @@ void loop() {
       l_int_numLeds = map(g_int_poids, g_int_tare, g_int_tare + g_int_dose_liq1 + g_int_dose_liq2, 0, NUMPIXELS);
       //Serial.print("Num leds : ");
       //Serial.println(l_int_numLeds);
+      
       allumeLedsLiq(l_int_numLeds);
       g_bool_etatPompe1 = true;
+      //allumePompe1();
+
       g_bool_etatPompe2 = false;
+      //eteintPompe2();
+
       break;
     
     case SERVICE2 :
       //LED MAPS
       l_int_numLeds = map(g_int_poids, g_int_tare, g_int_tare + g_int_dose_liq1 + g_int_dose_liq2, 0, NUMPIXELS);
       allumeLedsLiq(l_int_numLeds);
+
       g_bool_etatPompe1 = false;
+      //eteintPompe1();
+
       g_bool_etatPompe2 = true;
+      //allumePompe2();
       break;
     
     case FIN :
       g_bool_etatPompe1 = false;
+      //eteintPompe1();
+
       g_bool_etatPompe2 = false;
+      //eteintPompe2();
+
       allumeLedsVert();
       break;
 
@@ -143,9 +178,25 @@ void loop() {
       break;
   }
 
+  if(g_bool_etatPompe1==false){
+    eteintPompe1();
+  }
+  if(g_bool_etatPompe2==false){
+    eteintPompe2();
+  }
+  if(g_bool_etatPompe1==true){
+    allumePompe1();
+  }
+  if(g_bool_etatPompe2==true){
+    allumePompe2();
+  }
+
+
+
+  //DEBUG
   Serial.print("Etat : ");
   Serial.println(g_etat);
   Serial.print("Poids : ");
   Serial.println(g_int_poids);
-  delay(1);
+  delay(500);
 }
