@@ -1,16 +1,16 @@
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 
-#define PIN_POMPE1 
-#define PIN_POMPE2 
-#define PIN_POTENTIOMETRE 
-#define PIN_BP1 0x04
+#define PIN_POMPE1 6
+#define PIN_POMPE2 7
+#define PIN_POTENTIOMETRE 1//A1
+#define PIN_BP1 0x10
 #define PIN_POIDS 2
 #define PIN_LEDS 6
 #define NUMPIXELS 10
 
 int g_int_poids;
-int g_int_dose_liq1 = 40;
+int g_int_dose_liq1 = 400;
 int g_int_dose_liq2 = 200;
 int g_int_tare = 50;
 bool g_bool_BP;
@@ -36,17 +36,41 @@ void allumeLedsBleu(){
     }
 }
 
+void allumeLedsLiq(int x_int_numLeds){
+  for (int iBcl=0;iBcl<x_int_numLeds;iBcl++){
+      strip.setPixelColor(iBcl, strip.Color(150, 0, 150));
+      strip.show();
+    }
+}
+
+void eteintLeds(){
+  for (int iBcl=0;iBcl<NUMPIXELS;iBcl++){
+      strip.setPixelColor(iBcl, strip.Color(0, 0, 0));
+      strip.show();
+    }
+}
+
 void setup() {
+  Serial.begin(9600);
   DDRB = 0x00;
   DDRC = 0x00;
+  DDRD = 0x00;
   strip.begin();
+  
 }
 
 void loop() {
+//VARIABLES LOCALES
+  int l_int_numLeds;
+
+
   //LECTURE ENTREES
 
   //Etat du bouton cablé sur PORT Dx = PDx
   g_bool_BP = ((PIND & PIN_BP1) == PIN_BP1);
+
+  //debug poids
+  g_int_poids = analogRead(PIN_POTENTIOMETRE);
 
 
 
@@ -87,18 +111,24 @@ void loop() {
       allumeLedsBleu();
       break;
     
+    case ATT_BP :
+      eteintLeds();
+      break;
+    
     case SERVICE1 :
       //LED MAPS
-      map(g_int_poids, g_int_tare, g_int_tare + g_int_dose_liq1, 0, NUMPIXELS);
-
+      l_int_numLeds = map(g_int_poids, g_int_tare, g_int_tare + g_int_dose_liq1 + g_int_dose_liq2, 0, NUMPIXELS);
+      //Serial.print("Num leds : ");
+      //Serial.println(l_int_numLeds);
+      allumeLedsLiq(l_int_numLeds);
       g_bool_etatPompe1 = true;
       g_bool_etatPompe2 = false;
       break;
     
     case SERVICE2 :
       //LED MAPS
-      map(g_int_poids, g_int_tare, g_int_tare + g_int_dose_liq1 + g_int_dose_liq2, 0, NUMPIXELS);
-
+      l_int_numLeds = map(g_int_poids, g_int_tare, g_int_tare + g_int_dose_liq1 + g_int_dose_liq2, 0, NUMPIXELS);
+      allumeLedsLiq(l_int_numLeds);
       g_bool_etatPompe1 = false;
       g_bool_etatPompe2 = true;
       break;
@@ -108,7 +138,14 @@ void loop() {
       g_bool_etatPompe2 = false;
       allumeLedsVert();
       break;
+
+    default :
+      break;
   }
 
-
+  Serial.print("Etat : ");
+  Serial.println(g_etat);
+  Serial.print("Poids : ");
+  Serial.println(g_int_poids);
+  delay(1);
 }
