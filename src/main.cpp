@@ -1,17 +1,24 @@
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
+#include "HX711.h"
 
-#define PIN_POMPE1 8
-#define PIN_POMPE2 9
+//définitions
+#define PIN_POMPE1 6
+#define PIN_POMPE2 7
 #define PIN_POTENTIOMETRE 1//A1
-#define PIN_BP1 0x10
-#define PIN_POIDS 2
-#define PIN_LEDS 6
+#define PIN_BP1 0x10 //PD4
+#define PIN_LEDS 9
 #define NUMPIXELS 10
+#define LOADCELL_DOUT_PIN  3
+#define LOADCELL_SCK_PIN  2
 
-int g_int_poids;
-int g_int_dose_liq1 = 400;
-int g_int_dose_liq2 = 200;
+HX711 scale;
+
+//Variables Globales
+float calibration_factor = -1094000;
+float g_float_poids;
+int g_int_dose_liq1 = 10;
+int g_int_dose_liq2 = 100;
 int g_int_tare = 50;
 bool g_bool_BP;
 bool g_bool_etatPompe1;
@@ -51,23 +58,23 @@ void eteintLeds(){
 }
 
 void allumePompe1(){
-  digitalWrite(PIN_POMPE1, HIGH);
-  Serial.println("Pompe 1 allumée");
+  digitalWrite(PIN_POMPE1, LOW);
+  //Serial.println("Pompe 1 allumée");
 }
 
 void allumePompe2(){
-  digitalWrite(PIN_POMPE2, HIGH);
-  Serial.println("Pompe 2 allumée");
+  digitalWrite(PIN_POMPE2, LOW);
+  //Serial.println("Pompe 2 allumée");
 }
 
 void eteintPompe1(){
-  digitalWrite(PIN_POMPE1, LOW);
-  Serial.println("Pompe 1 éteinte");
+  digitalWrite(PIN_POMPE1, HIGH);
+  //Serial.println("Pompe 1 éteinte");
 }
 
 void eteintPompe2(){
-  digitalWrite(PIN_POMPE2, LOW);
-  Serial.println("Pompe 2 éteinte");
+  digitalWrite(PIN_POMPE2, HIGH);
+  //Serial.println("Pompe 2 éteinte");
 }
 
 void setup() {
@@ -78,21 +85,45 @@ void setup() {
   pinMode(PIN_POMPE1, OUTPUT);
   pinMode(PIN_POMPE2, OUTPUT);
   strip.begin();
+
+  Serial.println("HX711 calibration sketch");
+  Serial.println("Remove all weight from scale");
+  Serial.println("After readings begin, place known weight on scale");
+  Serial.println("Press + or a to increase calibration factor");
+  Serial.println("Press - or z to decrease calibration factor");
+
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+  scale.set_scale();
+  scale.tare();	//Reset the scale to 0
+
+  long zero_factor = scale.read_average(); //Get a baseline reading
+  Serial.print("Zero factor: "); //This can be used to remove the need to tare the scale. Useful in permanent scale projects.
+  Serial.println(zero_factor);
   
 }
 
 void loop() {
-//VARIABLES LOCALES
+  //VARIABLES LOCALES
   int l_int_numLeds;
 
-
   //LECTURE ENTREES
+  scale.set_scale(calibration_factor); //Adjust to this calibration factor
+
+  Serial.print("Reading: ");
+  //Lecture du poids
+  g_float_poids = scale.get_units()*1000;
+
+  Serial.print(g_float_poids);
+  Serial.print(" g"); //Change this to kg and re-adjust the calibration factor if you follow SI units like a sane person
+  Serial.print(" calibration_factor: ");
+  Serial.print(calibration_factor);
+  Serial.println();
 
   //Etat du bouton cablé sur PORT Dx = PDx
   g_bool_BP = !((PIND & PIN_BP1) == PIN_BP1);
 
   //debug poids
-  g_int_poids = analogRead(PIN_POTENTIOMETRE);
+  //g_float_poids = analogRead(PIN_POTENTIOMETRE);
 
 
 
@@ -109,17 +140,17 @@ void loop() {
       }
       break;
     case SERVICE1 :
-      if(g_int_poids >= g_int_tare + g_int_dose_liq1){
+      if(g_float_poids >= g_int_tare + g_int_dose_liq1){
         g_etat = SERVICE2;
       }
       break;
     case SERVICE2 : 
-      if(g_int_poids >= g_int_tare + g_int_dose_liq1 + g_int_dose_liq2){
+      if(g_float_poids >= g_int_tare + g_int_dose_liq1 + g_int_dose_liq2){
         g_etat = FIN;
       }
       break;
     case FIN :
-      if(g_int_poids<g_int_tare){
+      if(g_float_poids<g_int_tare){
         g_etat = READY;
       }
   }
@@ -139,7 +170,7 @@ void loop() {
     
     case SERVICE1 :
       //LED MAPS
-      l_int_numLeds = map(g_int_poids, g_int_tare, g_int_tare + g_int_dose_liq1 + g_int_dose_liq2, 0, NUMPIXELS);
+      l_int_numLeds = map(g_float_poids, g_int_tare, g_int_tare + g_int_dose_liq1 + g_int_dose_liq2, 0, NUMPIXELS);
       //Serial.print("Num leds : ");
       //Serial.println(l_int_numLeds);
       
@@ -154,7 +185,7 @@ void loop() {
     
     case SERVICE2 :
       //LED MAPS
-      l_int_numLeds = map(g_int_poids, g_int_tare, g_int_tare + g_int_dose_liq1 + g_int_dose_liq2, 0, NUMPIXELS);
+      l_int_numLeds = map(g_float_poids, g_int_tare, g_int_tare + g_int_dose_liq1 + g_int_dose_liq2, 0, NUMPIXELS);
       allumeLedsLiq(l_int_numLeds);
 
       g_bool_etatPompe1 = false;
@@ -194,9 +225,13 @@ void loop() {
 
 
   //DEBUG
+  /*
   Serial.print("Etat : ");
-  Serial.println(g_etat);
-  Serial.print("Poids : ");
-  Serial.println(g_int_poids);
+  */
+ Serial.println(g_etat);
+  /*Serial.print("Poids : ");
+  Serial.println(g_float_poids);
   delay(500);
+  */
+ delay(500);
 }
