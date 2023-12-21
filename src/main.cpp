@@ -34,18 +34,18 @@
 #define NUMPIXELS 10
 
 
-
+//Objets
 HX711 scale;
 
 //Variables Globales
-float calibration_factor = -1094000;
-float g_float_poids;
-int g_int_dose_liq1 = 10;
-int g_int_dose_liq2 = 100;
-int g_int_tare = 50;
-bool g_bool_BP;
-bool g_bool_etatPompe1;
-bool g_bool_etatPompe2;
+float calibration_factor = -1094000; //facteur de calibration du capteur de poids
+float g_float_poids; //Poids en g
+int g_int_dose_liq1 = 10; //Dose de liquide 1 en mL
+int g_int_dose_liq2 = 100; //Dose de liquide 2 en mL
+int g_int_tare = 50; //Poids de la bouteille vide
+bool g_bool_BP; //Etat du bouton poussoir
+bool g_bool_etatPompe1;  //Etat de la pompe 1
+bool g_bool_etatPompe2; //Etat de la pompe 2
 
 typedef enum {READY,ATT_BP,SERVICE1,SERVICE2,FIN} TEtat;
 
