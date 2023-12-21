@@ -3,14 +3,31 @@
 #include "HX711.h"
 
 //définitions
-#define PIN_POMPE1 6
-#define PIN_POMPE2 7
-#define PIN_POTENTIOMETRE 1//A1
+//Pins
+#define PIN_ENC1 0 //PD0
+#define PIN_ENC2 1 //PD1
+
+#define LOADCELL_SCK_PIN  2 //PD2
+#define LOADCELL_DOUT_PIN  3 //PD3
+
 #define PIN_BP1 0x10 //PD4
-#define PIN_LEDS 9
+
+#define PIN_LEDS 5 //PD5
+
+#define PIN_POMPE1 6 //PD6
+#define PIN_POMPE2 7 //PD7
+
+#define PIN_CS 8 //PB0
+#define PIN_DC 9 //PB1
+#define PIN_RST 10 //PB2
+#define PIN_SDA 11 //PB3
+#define PIN_LIGHT 12 //PB4
+#define PIN_SCK 13 //PB5
+
+//Definitions autres
 #define NUMPIXELS 10
-#define LOADCELL_DOUT_PIN  3
-#define LOADCELL_SCK_PIN  2
+
+
 
 HX711 scale;
 
