@@ -2,21 +2,27 @@
 #include <Arduino.h>
 #include "HX711.h"
 
-//définitions
-//Pins
+//Définitions
+
+//pins encodeur
 #define PIN_ENC1 0 //PD0
 #define PIN_ENC2 1 //PD1
 
+//pins capteur de poids
 #define LOADCELL_SCK_PIN  2 //PD2
 #define LOADCELL_DOUT_PIN  3 //PD3
 
+//pin bouton poussoir
 #define PIN_BP1 0x10 //PD4
 
+//pin strip led
 #define PIN_LEDS 5 //PD5
 
+//pins pompes
 #define PIN_POMPE1 6 //PD6
 #define PIN_POMPE2 7 //PD7
 
+//pins ecran
 #define PIN_CS 8 //PB0
 #define PIN_DC 9 //PB1
 #define PIN_RST 10 //PB2
@@ -95,6 +101,7 @@ void eteintPompe2(){
 }
 
 void setup() {
+  //Initialisation des ports en entrée ou sortie
   Serial.begin(9600);
   DDRB = 0x00;
   DDRC = 0x00;
@@ -103,6 +110,7 @@ void setup() {
   pinMode(PIN_POMPE2, OUTPUT);
   strip.begin();
 
+  //Initialisation du capteur de poids
   Serial.println("HX711 calibration sketch");
   Serial.println("Remove all weight from scale");
   Serial.println("After readings begin, place known weight on scale");
@@ -125,11 +133,12 @@ void loop() {
 
   //LECTURE ENTREES
   scale.set_scale(calibration_factor); //Adjust to this calibration factor
-
   Serial.print("Reading: ");
+
   //Lecture du poids
   g_float_poids = scale.get_units()*1000;
 
+  //Affichage du poids
   Serial.print(g_float_poids);
   Serial.print(" g"); //Change this to kg and re-adjust the calibration factor if you follow SI units like a sane person
   Serial.print(" calibration_factor: ");
@@ -139,7 +148,7 @@ void loop() {
   //Etat du bouton cablé sur PORT Dx = PDx
   g_bool_BP = !((PIND & PIN_BP1) == PIN_BP1);
 
-  //debug poids
+  //debug poids via potentiomètre
   //g_float_poids = analogRead(PIN_POTENTIOMETRE);
 
 
@@ -226,6 +235,7 @@ void loop() {
       break;
   }
 
+  //MAJ POMPES
   if(g_bool_etatPompe1==false){
     eteintPompe1();
   }
@@ -242,13 +252,12 @@ void loop() {
 
 
   //DEBUG
-  /*
-  Serial.print("Etat : ");
-  */
- Serial.println(g_etat);
-  /*Serial.print("Poids : ");
-  Serial.println(g_float_poids);
-  delay(500);
-  */
+
+  //Serial.print("Etat : ");
+  Serial.println(g_etat);
+  //Serial.print("Poids : ");
+  //Serial.println(g_float_poids);
+  //delay(500);
+  
  delay(500);
 }
