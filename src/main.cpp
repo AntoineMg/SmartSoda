@@ -40,26 +40,25 @@
 //Variables Globales
 float calibration_factor = -1094000; //facteur de calibration du capteur de poids
 float g_float_poids; //Poids en g
-int g_int_dose_liq1 = 10; //Dose de liquide 1 en mL
-int g_int_dose_liq2 = 100; //Dose de liquide 2 en mL
-int g_int_tare = 50; //Poids de la bouteille vide
+int g_int_dose_liq1; //Dose de liquide 1 en mL
+int g_int_dose_liq2; //Dose de liquide 2 en mL
+int g_int_tare = 10; //Poids à vide
 bool g_bool_BP; //Etat du bouton poussoir
 bool g_bool_etatPompe1;  //Etat de la pompe 1
 bool g_bool_etatPompe2; //Etat de la pompe 2
 bool sens; //Sens de rotation de l'encodeur
 
+int g_int_dosage1[2] = {40,200}; //Classique
+int g_int_dosage2[2] = {30,200}; //Léger
+int g_int_dosage3[2] = {50,150}; //Fort
+
+//Etats
 typedef enum
 {
   INIT,
-  CHOICE,
-  CLASSIC,
-  EDITMODE,
-  QUANTITYSELECT,
-  LIQUIDCLADD,
-  LIQUIDCLADDPLUS,
-  LIQUIDREMOVE,
-  LIQUIDREMOVEMINUS,
-  READY,
+  DOSAGE1,
+  DOSAGE2,
+  DOSAGE3,
   ATT_BP,
   SERVICE1,
   SERVICE2,
@@ -125,15 +124,15 @@ void encodeurTickA()
   static unsigned long dateDernierChangement = 0;
 
   unsigned long date = millis();
-  if ((date - dateDernierChangement) > dureeAntiRebond)
+  if ((date - dateDernierChangement) > ANTI_BOUNCE)
   {
-    if (digitalRead(pinEncodeurB) == LOW)
+    if (digitalRead(PIN_ENCB) == LOW)
     {
-      compte = true;
+      sens = true;
     }
     else
     {
-      compte = false;
+      sens = false;
     }
     dateDernierChangement = date;
   }
@@ -172,8 +171,8 @@ void setup() {
   Serial.println(zero_factor);
 
   //Encodeur rotatif
-  pinMode(pinEncodeurA, INPUT);
-  pinMode(pinEncodeurB, INPUT);
+  pinMode(PIN_ENCA, INPUT);
+  pinMode(PIN_ENCB, INPUT);
 
   attachInterrupt(0, encodeurTickA, FALLING);
 
@@ -211,171 +210,104 @@ void loop() {
     //INIT
     case INIT:
     if (g_bool_BP){
-      g_etat_courant = CHOICE; // si on pose un verre (donc verre détecté) et qu'on appuie sur le bouton valider alors on passe au choix
+      g_etat_courant = DOSAGE1; // si on pose un verre (donc verre détecté) et qu'on appuie sur le bouton valider alors on passe au mode dosage 1
     }
     break;
-  
-    //CHOICE
-    case CHOICE:
-      g_etat_courant = CLASSIC;
-      break;
 
-    //CLASSIC
-    case CLASSIC:
+    //DOSAGE1
+    case DOSAGE1:
       if (sens==true){
-        g_etat_courant = EDITMODE; // si on tourne dans le sens horaire alors on passe en mode édition
+        g_etat_courant = DOSAGE2; 
+      }
+      else if (g_bool_BP){
+        g_etat_courant = ATT_BP; 
       }
       break;
     
-    //EDITMODE
-    case EDITMODE:
+    //DOSAGE2
+    case DOSAGE2:
       if (sens==false){
-        g_etat_courant = CLASSIC; // si on tourne dans le sens anti-horaire alors on passe en mode classique
+        g_etat_courant = DOSAGE1; 
       }
-      else if (sens==true){
-        g_etat_courant = QUANTITYSELECT; // si on tourne dans le sens horaire alors on passe en mode sélection de quantité
-      }
-      break;
-    
-    //QUANTITYSELECT
-    case QUANTITYSELECT:
-      if (sens==false){
-        g_etat_courant = EDITMODE; // si on tourne dans le sens anti-horaire alors on passe en mode édition
-      }
-      else if (sens==true){
-        g_etat_courant = LIQUIDCLADD; // si on tourne dans le sens horaire alors on passe en mode ajout de liquide
-      }
-      break;
-    
-    //LIQUIDCLADD
-    case LIQUIDCLADD:
-      if (sens==false){
-        g_etat_courant = QUANTITYSELECT; // si on tourne dans le sens anti-horaire alors on passe en mode sélection de quantité
-      }
-      else if (sens==true){
-        g_etat_courant = LIQUIDCLADDPLUS; // si on tourne dans le sens horaire alors on passe en mode ajout de liquide +
-      }
-      break;
-    
-    //LIQUIDCLADDPLUS
-    case LIQUIDCLADDPLUS:
-      if (sens==false){
-        g_etat_courant = LIQUIDCLADD; // si on tourne dans le sens anti-horaire alors on passe en mode ajout de liquide
-      }
-      else if (sens==true){
-        g_etat_courant = LIQUIDREMOVE; // si on tourne dans le sens horaire alors on passe en mode retrait de liquide
-      }
-      break;
-    
-    //LIQUIDREMOVE
-    case LIQUIDREMOVE:
-      if (sens==false){
-        g_etat_courant = LIQUIDCLADDPLUS; // si on tourne dans le sens anti-horaire alors on passe en mode ajout de liquide +
-      }
-      else if (sens==true){
-        g_etat_courant = LIQUIDREMOVEMINUS; // si on tourne dans le sens horaire alors on passe en mode retrait de liquide -
-      }
-      break;
-    
-    //LIQUIDREMOVEMINUS
-    case LIQUIDREMOVEMINUS:
-      if (sens==false){
-        g_etat_courant = LIQUIDREMOVE; // si on tourne dans le sens anti-horaire alors on passe en mode retrait de liquide
-      }
-      else if (sens==true){
-        g_etat_courant = TWOPUMPSMODE; // si on tourne dans le sens horaire alors on passe en mode deux pompes
-      }
-      break;
-    
 
-    // READY
-    case READY :
-      if(g_bool_BP==true){
-        g_etat = ATT_BP; 
+      else if (sens==true){
+        g_etat_courant = DOSAGE3; 
       }
-      break; 
+
+      else if (g_bool_BP){
+        g_etat_courant = ATT_BP; 
+      }
+      break;
     
+    //DOSAGE3
+    case DOSAGE3:
+      if (sens==false){
+        g_etat_courant = DOSAGE2; 
+      }
+
+      else if (g_bool_BP){
+        g_etat_courant = ATT_BP; 
+      }
+      break;
+
     // ATT_BP
     case ATT_BP :
       if(g_bool_BP==false){
-        g_etat = SERVICE1; 
+        g_etat_courant = SERVICE1; 
       }
       break;
     
     // SERVICE1
     case SERVICE1 :
       if(g_float_poids >= g_int_tare + g_int_dose_liq1){
-        g_etat = SERVICE2;
+        g_etat_courant = SERVICE2;
       }
       break;
     
     // SERVICE2
     case SERVICE2 : 
       if(g_float_poids >= g_int_tare + g_int_dose_liq1 + g_int_dose_liq2){
-        g_etat = FIN;
+        g_etat_courant = FIN;
       }
       break;
     
     // FIN
     case FIN :
       if(g_float_poids<g_int_tare){
-        g_etat = READY;
+        g_etat_courant = DOSAGE1;
       }
   }
 
   if(g_etat_courant != g_etat_old){
     //MAJ SORTIES
-    switch(g_etat){
+    switch(g_etat_courant){
 
       //INIT
       case INIT:
         //Actions d'initialisation
-        break;
-      
-      //CHOICE
-      case CHOICE:
-        //Actions de choix
-        break;
-      
-      //CLASSIC
-      case CLASSIC:
-        //Actions de mode classique
-        break;
-      
-      //EDITMODE
-      case EDITMODE:
-        //Actions de mode édition
-        break;
-      
-      //QUANTITYSELECT
-      case QUANTITYSELECT:
-        //Actions de sélection de quantité
-        break;
-      
-      //LIQUIDCLADD
-      case LIQUIDCLADD:
-        //Actions d'ajout de liquide
-        break;
-      
-      //LIQUIDCLADDPLUS
-      case LIQUIDCLADDPLUS:
-        //Actions d'ajout de liquide +
-        break;
-      
-      //LIQUIDREMOVE
-      case LIQUIDREMOVE:
-        //Actions de retrait de liquide
-        break;
-      
-      //LIQUIDREMOVEMINUS
-      case LIQUIDREMOVEMINUS:
-        //Actions de retrait de liquide -
-        break;
-
-      case READY :
-        //Actions de mode Ready
         g_bool_etatPompe1 = false;
         g_bool_etatPompe2 = false;
+        allumeLedsBleu();
+        break;
+      
+      case DOSAGE1:
+        //Actions de mode Dosage 1
+        g_int_dose_liq1 = g_int_dosage1[0];
+        g_int_dose_liq2 = g_int_dosage1[1];
+        allumeLedsBleu();
+        break;
+      
+      case DOSAGE2:
+        //Actions de mode Dosage 2
+        g_int_dose_liq1 = g_int_dosage2[0];
+        g_int_dose_liq2 = g_int_dosage2[1];
+        allumeLedsBleu();
+        break;
+      
+      case DOSAGE3:
+        //Actions de mode Dosage 3
+        g_int_dose_liq1 = g_int_dosage3[0];
+        g_int_dose_liq2 = g_int_dosage3[1];
         allumeLedsBleu();
         break;
       
@@ -388,16 +320,11 @@ void loop() {
         //Actions de mode Service 1
         //LED MAPS
         l_int_numLeds = map(g_float_poids, g_int_tare, g_int_tare + g_int_dose_liq1 + g_int_dose_liq2, 0, NUMPIXELS);
-        //Serial.print("Num leds : ");
-        //Serial.println(l_int_numLeds);
-        
         allumeLedsLiq(l_int_numLeds);
+
+        //Changement des états des pompes
         g_bool_etatPompe1 = true;
-        //allumePompe1();
-
         g_bool_etatPompe2 = false;
-        //eteintPompe2();
-
         break;
       
       case SERVICE2 :
@@ -406,20 +333,15 @@ void loop() {
         l_int_numLeds = map(g_float_poids, g_int_tare, g_int_tare + g_int_dose_liq1 + g_int_dose_liq2, 0, NUMPIXELS);
         allumeLedsLiq(l_int_numLeds);
 
+        //Changement des états des pompes
         g_bool_etatPompe1 = false;
-        //eteintPompe1();
-
         g_bool_etatPompe2 = true;
-        //allumePompe2();
         break;
       
       case FIN :
         //Actions de mode Fin
         g_bool_etatPompe1 = false;
-        //eteintPompe1();
-
         g_bool_etatPompe2 = false;
-        //eteintPompe2();
 
         allumeLedsVert();
         break;
@@ -445,12 +367,9 @@ void loop() {
 
 
   //DEBUG
-
-  //Serial.print("Etat : ");
-  Serial.println(g_etat);
-  //Serial.print("Poids : ");
-  //Serial.println(g_float_poids);
-  //delay(500);
-  
- delay(500);
+  Serial.print("Etat : ");
+  Serial.println(g_etat_courant);
+  Serial.print("Poids : ");
+  Serial.println(g_float_poids);
+  delay(100);
 }
