@@ -2,18 +2,13 @@
 #include <Arduino.h>
 #include "HX711.h"
 #include <TFT.h>  // Arduino LCD library
-#include <TFT_eSPI.h> // Graphics and font library for ST7735 driver chip
 #include <SPI.h> // Arduino SPI library
 
 //Définitions
 
 //pins capteur de poids
-#define LOADCELL_SCK_PIN  0 //PD2
-#define LOADCELL_DOUT_PIN  1 //PD3
-
-//pins encodeur
-#define PIN_ENCA 2 //PD0
-#define PIN_ENCB 3 //PD1
+#define LOADCELL_SCK_PIN  2 //PD2
+#define LOADCELL_DOUT_PIN  3 //PD3
 
 //pin bouton poussoir
 #define PIN_BP1 0x10 //PD4
@@ -22,8 +17,8 @@
 #define PIN_LEDS 5 //PD5
 
 //pins pompes
-#define PIN_POMPE1 6 //PD6
-#define PIN_POMPE2 7 //PD7
+#define PIN_POMPE1 7 //PD6
+#define PIN_POMPE2 6 //PD7
 
 //pins ecran
 #define PIN_CS 8 //PB0
@@ -46,9 +41,9 @@ int g_int_tare = 10; //Poids à vide
 bool g_bool_BP; //Etat du bouton poussoir
 bool g_bool_etatPompe1;  //Etat de la pompe 1
 bool g_bool_etatPompe2; //Etat de la pompe 2
-bool sens; //Sens de rotation de l'encodeur
 
-int g_int_dosage1[2] = {40,200}; //Classique
+
+int g_int_dosage1[2] = {40,100}; //Classique
 int g_int_dosage2[2] = {30,200}; //Léger
 int g_int_dosage3[2] = {50,150}; //Fort
 
@@ -57,8 +52,6 @@ typedef enum
 {
   INIT,
   DOSAGE1,
-  DOSAGE2,
-  DOSAGE3,
   ATT_BP,
   SERVICE1,
   SERVICE2,
@@ -68,7 +61,6 @@ typedef enum
 //Objets et instances
 HX711 scale;
 Adafruit_NeoPixel strip(NUMPIXELS, PIN_LEDS, NEO_GRB + NEO_KHZ800); //Objet strip led
-TFT_eSPI tft = TFT_eSPI(); // instanciation pour pouvoir utiliser les méthodes de TFT_eSPI
 TEtat g_etat_courant, g_etat_old; 
 
 void allumeLedsVert(){
@@ -100,43 +92,25 @@ void eteintLeds(){
 }
 
 void allumePompe1(){
-  digitalWrite(PIN_POMPE1, LOW);
+  digitalWrite(PIN_POMPE1, HIGH);
   //Serial.println("Pompe 1 allumée");
 }
 
 void allumePompe2(){
-  digitalWrite(PIN_POMPE2, LOW);
+  digitalWrite(PIN_POMPE2, HIGH);
   //Serial.println("Pompe 2 allumée");
 }
 
 void eteintPompe1(){
-  digitalWrite(PIN_POMPE1, HIGH);
+  digitalWrite(PIN_POMPE1, LOW);
   //Serial.println("Pompe 1 éteinte");
 }
 
 void eteintPompe2(){
-  digitalWrite(PIN_POMPE2, HIGH);
+  digitalWrite(PIN_POMPE2, LOW);
   //Serial.println("Pompe 2 éteinte");
 }
 
-void encodeurTickA()
-{
-  static unsigned long dateDernierChangement = 0;
-
-  unsigned long date = millis();
-  if ((date - dateDernierChangement) > ANTI_BOUNCE)
-  {
-    if (digitalRead(PIN_ENCB) == LOW)
-    {
-      sens = true;
-    }
-    else
-    {
-      sens = false;
-    }
-    dateDernierChangement = date;
-  }
-}
 
 void setup() {
   //Initialisation des ports en entrée ou sortie
@@ -152,8 +126,7 @@ void setup() {
   g_etat_old = g_etat_courant; 
 
   //Initialisation de l'écran
-  tft.init();   
-  tft.setRotation(0);   
+   
 
   //Initialisation du capteur de poids
   Serial.println("HX711 calibration sketch");
@@ -169,12 +142,6 @@ void setup() {
   long zero_factor = scale.read_average(); //Get a baseline reading
   Serial.print("Zero factor: "); //This can be used to remove the need to tare the scale. Useful in permanent scale projects.
   Serial.println(zero_factor);
-
-  //Encodeur rotatif
-  pinMode(PIN_ENCA, INPUT);
-  pinMode(PIN_ENCB, INPUT);
-
-  attachInterrupt(0, encodeurTickA, FALLING);
 
   
 }
@@ -209,46 +176,17 @@ void loop() {
   switch(g_etat_courant){
     //INIT
     case INIT:
-    if (g_bool_BP){
       g_etat_courant = DOSAGE1; // si on pose un verre (donc verre détecté) et qu'on appuie sur le bouton valider alors on passe au mode dosage 1
-    }
+    
     break;
 
     //DOSAGE1
     case DOSAGE1:
-      if (sens==true){
-        g_etat_courant = DOSAGE2; 
-      }
-      else if (g_bool_BP){
-        g_etat_courant = ATT_BP; 
+      if(g_bool_BP==true){
+        g_etat_courant = ATT_BP;
       }
       break;
     
-    //DOSAGE2
-    case DOSAGE2:
-      if (sens==false){
-        g_etat_courant = DOSAGE1; 
-      }
-
-      else if (sens==true){
-        g_etat_courant = DOSAGE3; 
-      }
-
-      else if (g_bool_BP){
-        g_etat_courant = ATT_BP; 
-      }
-      break;
-    
-    //DOSAGE3
-    case DOSAGE3:
-      if (sens==false){
-        g_etat_courant = DOSAGE2; 
-      }
-
-      else if (g_bool_BP){
-        g_etat_courant = ATT_BP; 
-      }
-      break;
 
     // ATT_BP
     case ATT_BP :
@@ -278,7 +216,6 @@ void loop() {
       }
   }
 
-  if(g_etat_courant != g_etat_old){
     //MAJ SORTIES
     switch(g_etat_courant){
 
@@ -294,20 +231,6 @@ void loop() {
         //Actions de mode Dosage 1
         g_int_dose_liq1 = g_int_dosage1[0];
         g_int_dose_liq2 = g_int_dosage1[1];
-        allumeLedsBleu();
-        break;
-      
-      case DOSAGE2:
-        //Actions de mode Dosage 2
-        g_int_dose_liq1 = g_int_dosage2[0];
-        g_int_dose_liq2 = g_int_dosage2[1];
-        allumeLedsBleu();
-        break;
-      
-      case DOSAGE3:
-        //Actions de mode Dosage 3
-        g_int_dose_liq1 = g_int_dosage3[0];
-        g_int_dose_liq2 = g_int_dosage3[1];
         allumeLedsBleu();
         break;
       
@@ -348,7 +271,7 @@ void loop() {
 
       default :
         break;
-    }
+  
 
     //MAJ POMPES
     if(g_bool_etatPompe1==false){
