@@ -19,8 +19,8 @@
 #define PIN_LEDS 5 //PD5
 
 //pins pompes
-#define PIN_POMPE1 6 //PD6
-#define PIN_POMPE2 7 //PD7
+#define PIN_POMPE1 7 //PD6
+#define PIN_POMPE2 6 //PD7
 
 //pins ecran
 #define PIN_CS 8 //PB0
@@ -40,9 +40,9 @@ HX711 scale;
 //Variables Globales
 float calibration_factor = -1094000; //facteur de calibration du capteur de poids
 float g_float_poids; //Poids en g
-int g_int_dose_liq1 = 10; //Dose de liquide 1 en mL
-int g_int_dose_liq2 = 100; //Dose de liquide 2 en mL
-int g_int_tare = 50; //Poids de la bouteille vide
+int g_int_dose_liq1 = 50; //Dose de liquide 1 en mL
+int g_int_dose_liq2 = 70; //Dose de liquide 2 en mL
+int g_int_tare = 5; //Poids de la bouteille vide
 bool g_bool_BP; //Etat du bouton poussoir
 bool g_bool_etatPompe1;  //Etat de la pompe 1
 bool g_bool_etatPompe2; //Etat de la pompe 2
@@ -253,10 +253,10 @@ void loop() {
 
   //DEBUG
 
-  //Serial.print("Etat : ");
+  Serial.print("Etat : ");
   Serial.println(g_etat);
-  //Serial.print("Poids : ");
-  //Serial.println(g_float_poids);
+  Serial.print("Poids : ");
+  Serial.println(g_float_poids);
   //delay(500);
   
  delay(500);
