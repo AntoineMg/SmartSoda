@@ -136,7 +136,13 @@ void loop() {
   Serial.print("Reading: ");
 
   //Lecture du poids
-  g_float_poids = scale.get_units()*1000;
+  if(Serial.available()){
+    g_float_poids = Serial.read();
+    while(Serial.available()){
+      Serial.read();
+    }
+  }
+    
 
   //Affichage du poids
   Serial.print(g_float_poids);
@@ -146,7 +152,8 @@ void loop() {
   Serial.println();
 
   //Etat du bouton cablé sur PORT Dx = PDx
-  g_bool_BP = !((PIND & PIN_BP1) == PIN_BP1);
+  g_bool_BP = Serial.read()=='A';
+  
 
   //debug poids via potentiomètre
   //g_float_poids = analogRead(PIN_POTENTIOMETRE);
